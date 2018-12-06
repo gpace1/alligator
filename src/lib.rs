@@ -6,7 +6,7 @@
 
 //! # Alligator 🐊
 //!
-//! Alligator is a small crate for getting values from futrues when the value is needed.
+//! Alligator is a small crate for getting the Output value from a future when it's needed
 //!
 //! There is only one strucutre in alligater, `Later` which is a wrapper
 //! around an object that implements future. The use of later is to polling to completion the
