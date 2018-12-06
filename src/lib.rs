@@ -90,35 +90,34 @@ impl<T,O> Poller<T,O> where T: Future<Output=O> {
 enum FuturePair<T,O> where T: Future<Output=O> {
     Fut(Poller<T,O>),
     Val(O),
+    None,
 }
 
 impl<T,O> FuturePair<T,O> where T: Future<Output=O> {
 
-    /// If self is a FuturePair::Fut(Poller<T,O>) then the future is polled to completion and self
-    /// is set FuturePair::Val(O). Nothing is done if self is a FuturePair::Val(O).
-    fn poll_into_val(&mut self) -> &mut Self {
-        use std::mem;
-
-        let lame_duck_fut = FuturePair::Fut( unsafe { mem::uninitialized() } );
-
-        if mem::discriminant(self) == mem::discriminant(&lame_duck_fut)
-        {
-            match mem::replace(self, unsafe{ mem::uninitialized() } )
-            {
-                FuturePair::Fut(poller) => mem::replace(self, FuturePair::Val(poller.poll_to_completion()) ),
-                FuturePair::Val(_) => panic!("File a bug if you get this panic"),
-            };
+    /// If self is a `Fut` then the future is polled to completion and self turned into a `Val`
+    /// containing the future output.
+    ///
+    /// This panics if self is not a `Fut`
+    fn poll_into_val(self) -> Self {
+        match self {
+            FuturePair::Fut(poller) => {
+                FuturePair::Val(poller.poll_to_completion())
+            },
+            _ => panic!("Report a bug if you get this panic"),
         }
-
-        self
     }
 
     /// Get a reference to the contained value
     #[inline]
-    fn get_val_ref(&mut self) -> &mut O {
-        match *self {
-            FuturePair::Val(ref mut v) => v,
-            FuturePair::Fut(_)         => self.poll_into_val().get_val_ref(),
+    fn get_ref_from_cell(cell: &Cell<Self>) -> &mut O {
+        match unsafe { &mut *cell.as_ptr() } {
+            FuturePair::Val(ref mut val) => val,
+            FuturePair::Fut(_) => {
+                cell.set(cell.take().poll_into_val());
+                Self::get_ref_from_cell(&cell)
+            },
+            _ => panic!("Report a bug if you get this panic"),
         }
     }
 
@@ -127,6 +126,7 @@ impl<T,O> FuturePair<T,O> where T: Future<Output=O> {
         match self {
             FuturePair::Val(v) => v,
             FuturePair::Fut(f) => f.poll_to_completion(),
+            _ => panic!("Report a bug if you get this panic"),
         }
     }
 }
@@ -137,16 +137,21 @@ impl<T,O> FuturePair<T,O>  where T: Future<Output=O>, O: Clone {
     /// If self is a FuturePair::Fut(Poller<T,O>) then the future is polled to completion and self
     /// is set FuturePair::Val(O).
     fn clone_in_cell(cell: &Cell<Self>) -> Self {
-        use std::mem;
-
-        let val = match cell.replace(unsafe{ mem::uninitialized() }) {
+        let val = match cell.take() {
             FuturePair::Val(val) => val,
             FuturePair::Fut(fut) => fut.poll_to_completion(),
+            _ => panic!("Report a bug if you get this panic"),
         };
 
         cell.set(FuturePair::Val(val.clone()));
 
         FuturePair::Val(val)
+    }
+}
+
+impl<T,O> Default for FuturePair<T,O> where T: Future<Output=O> {
+    fn default() -> Self {
+        FuturePair::None
     }
 }
 
@@ -191,15 +196,21 @@ impl<T,O> ::std::ops::Deref for Later<T,O> where T: Future<Output=O> {
     type Target = O;
 
     fn deref(&self) -> &O {
-        // unsafe{ *self.fut_pair.as_ptr() }.get_val_ref()
-        unimplemented!()
+        FuturePair::get_ref_from_cell(&self.fut_pair)
     }
 }
 
 impl<T,O> ::std::ops::DerefMut for Later<T,O> where T: Future<Output=O> {
     fn deref_mut(&mut self) -> &mut O {
-        // unsafe{ *self.fut_pair.as_ptr() }.get_val_ref()
-        unimplemented!()
+        FuturePair::get_ref_from_cell(&self.fut_pair)
+    }
+}
+
+impl<T,O> ::std::fmt::Display for Later<T,O> where T: Future<Output=O>, O: ::std::fmt::Display {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        use std::ops::Deref;
+
+        self.deref().fmt(f)
     }
 }
 
