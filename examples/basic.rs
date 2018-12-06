@@ -18,7 +18,7 @@ async fn not_actually_async() -> String {
 }
 
 /// The sleeper object just takes a message and a duration for when to return the message.
-async fn totally_async<T: Into<String>>(sleep_time: Duration, message: T) -> String {
+async fn basic_async<T: Into<String>>(sleep_time: Duration, message: T) -> String {
 
     await!(sleeper::Sleeper::new( sleep_time, message.into()))
 }
@@ -29,10 +29,10 @@ fn main() {
     // future (by passing a LocalWaker) into performing any asynchronous operations.
     let non_async_msg  = l!(not_actually_async());
 
-    let async_msg = l!(totally_async( Duration::from_millis(1500), "async_msg return message"));
+    let async_msg = l!(basic_async( Duration::from_millis(1500), "async_msg return message"));
 
     // l! and later! are the same, they're just a quick macro for Later::new.
-    let long_wait_async_msg = later!(totally_async( Duration::from_millis(4500), "long_wait_async_msg return message"));
+    let long_wait_async_msg = later!(basic_async( Duration::from_millis(4500), "long_wait_async_msg return message"));
 
     // Although `not_actually_async` is tagged with async, there isn't anything asynchronous
     // happening in the function. When the return is polled, it will only return ready with the
@@ -49,6 +49,10 @@ fn main() {
     // already expired. Internally, the future had already finished, so when the future is polled
     // it returns `Ready` with the contained message.
     println!("{}", async_msg.get());
+
+    // After its done polling, Later will never poll the contained future again, it will just
+    // return the value
+    println!("{}", async_msg);
 
     println!("A normal message");
 }
