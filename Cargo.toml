@@ -2,7 +2,7 @@
 name = "alligator"
 version = "0.1.0"
 license = "MIT"
-keywords= ["async/await", "futures", "main"]
+keywords= ["async", "futures", "main"]
 categories = ["asynchronous"]
 readme = "README.md"
 repository = "https://github.com/gpace1/alligator/"
