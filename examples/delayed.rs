@@ -29,10 +29,10 @@ fn main() {
     // future (by passing a LocalWaker) into performing any asynchronous operations.
     let non_async_msg  = l!(not_actually_async());
 
-    let async_msg = l!(basic_async( Duration::from_millis(1500), "async_msg return message"));
+    let async_msg = l!(basic_async( Duration::from_millis(1500), "async_msg message"));
 
     // l! and later! are the same, they're just a quick macro for Later::new.
-    let long_wait_async_msg = later!(basic_async( Duration::from_millis(4500), "long_wait_async_msg return message"));
+    let long_wait_async_msg = later!(basic_async( Duration::from_millis(4500), "long_wait_async_msg message"));
 
     // Although `not_actually_async` is tagged with async, there isn't anything asynchronous
     // happening in the function. When the return is polled, it will only return ready with the

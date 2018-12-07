@@ -6,26 +6,32 @@
 
 //! # Alligator 🐊
 //!
-//! Alligator is a small crate for getting the Output value from a future when it's needed
+//! Alligator is a small crate for getting the output value from a future
 //!
-//! There is only one strucutre in alligater, `Later` which is a wrapper
-//! around an object that implements future. The use of later is to polling to completion the
-//! contained future only when the Output value is needed, which is determined by dereferencing.
+//! [`Later`](file:///home/gpace/Projects/alligator/target/doc/alligator/struct.Later.html),
+//! the only strucutre in alligater, is a wrapper around an object that
+//! implements
+//! [`Future`](https://doc.rust-lang.org/nightly/core/future/trait.Future.html).
+//! The use of `Later` is for polling to completion the
+//! contained future only when the Output value is needed.
 //!
-//! The goal of alligator is to provide an easy way to get the value from most implementations of
-//! future, and that means there are some requirements for futures wrapped by `Later`.
+//! The goal of alligator is to provide an easy way to get the value from most
+//! implementations of `Future`. The implementation requirements for Futures
+//! wrapped by `Later` are under the secion
+//! [`Future Requirements`](./index.html#future-requirements).
 //!
-//! There is one problem with `Later`, it uses Pin::new_unchecked with poll. This is so that `Later`
-//! works with async fn returns object, which doesn't implement
+//! # Issues
+//! There is one problem with `Later`, it uses Pin::new_unchecked with poll. This
+//! is so that `Later` works with the return of an `async fn`, which doesn't implement
 //! [`UnPin`](https://doc.rust-lang.org/nightly/std/pin/trait.Unpin.html).
 //!
-//! # Future Returements
+//! # Future Requirements
 //!
-//! To use Objets that implement Future with Later, the poll method needs to be implemented as
-//! follows.
+//! To use Objets that implement Future with Later, the
+//! [`poll`](https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll)
+//! method needs to be implemented as follows.
 //!
-//! - The localWaker parameter of \
-//!   [`Future::poll`] must be used by the future.
+//! - The localWaker parameter of `poll` must be used by the future.
 //! - The call to wake on the parameter (or any Waker derived from the parameter) must only be used
 //!   when the next call to poll will return Poll::Ready
 //!
@@ -203,7 +209,7 @@ impl<T,O> Default for FuturePair<T,O> where T: Future<Output=O> {
     }
 }
 
-/// A wrapper for getting the output of future when it's needed
+/// A wrapper for retreiving the output of a future
 ///
 /// The purpose of `Later` is to create a wrapper that polls its contained future object to
 /// completion only at the point where the output of the future is required. The first call to any
